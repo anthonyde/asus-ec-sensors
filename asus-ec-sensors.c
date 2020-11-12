@@ -6,6 +6,7 @@
  */
 
 #include <linux/dmi.h>
+#include <linux/hwmon.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
@@ -27,6 +28,57 @@ static const struct dmi_system_id asus_ec_sensors_dmi_match[] = {
 };
 MODULE_DEVICE_TABLE(dmi, asus_ec_sensors_dmi_match);
 
+static umode_t asus_hwmon_is_visible(const void *data,
+				     enum hwmon_sensor_types type, u32 attr,
+				     int channel)
+{
+	switch (type) {
+	case hwmon_temp:
+		switch (attr) {
+		case hwmon_temp_input:
+			return 0444;
+		default:
+			break;
+		}
+	default:
+		break;
+	}
+	return 0;
+}
+
+static int asus_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
+			   u32 attr, int channel, long *val)
+{
+	switch (type) {
+	case hwmon_temp:
+		switch (attr) {
+		case hwmon_temp_input:
+			*val = 0;
+			return 0;
+		default:
+			break;
+		}
+	default:
+		break;
+	}
+	return -EOPNOTSUPP;
+}
+
+static const struct hwmon_ops asus_hwmon_ops = {
+	.is_visible = asus_hwmon_is_visible,
+	.read = asus_hwmon_read,
+};
+
+static const struct hwmon_channel_info *asus_hwmon_info[] = {
+	HWMON_CHANNEL_INFO(temp, HWMON_T_INPUT),
+	NULL
+};
+
+static const struct hwmon_chip_info asus_hwmon_chip_info = {
+	.ops = &asus_hwmon_ops,
+	.info = asus_hwmon_info,
+};
+
 static struct platform_driver asus_platform_driver = {
 	.driver = {
 		.name = "asus-ec-sensors",
@@ -35,7 +87,13 @@ static struct platform_driver asus_platform_driver = {
 
 static int __init asus_platform_probe(struct platform_device *pdev)
 {
-	return 0;
+	struct device *hwmon_dev =
+		devm_hwmon_device_register_with_info(&pdev->dev, "asusec",
+						     NULL,
+						     &asus_hwmon_chip_info,
+						     NULL);
+
+	return PTR_ERR_OR_ZERO(hwmon_dev);
 }
 
 static struct platform_device *asus_platform_device;
