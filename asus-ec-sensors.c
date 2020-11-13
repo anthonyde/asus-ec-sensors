@@ -5,6 +5,7 @@
  * Copyright (C) 2020 Anthony DeRossi <ajderossi@gmail.com>
  */
 
+#include <linux/acpi.h>
 #include <linux/dmi.h>
 #include <linux/hwmon.h>
 #include <linux/init.h>
@@ -15,6 +16,8 @@ MODULE_AUTHOR("Anthony DeRossi <ajderossi@gmail.com>");
 MODULE_DESCRIPTION("Asus EC sensor driver");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("0.1");
+
+#define T_SENSOR_OFFSET 61
 
 static const struct dmi_system_id asus_ec_sensors_dmi_match[] = {
 	{
@@ -49,11 +52,18 @@ static umode_t asus_hwmon_is_visible(const void *data,
 static int asus_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
 			   u32 attr, int channel, long *val)
 {
+	int err;
+	u8 byte_read;
+
 	switch (type) {
 	case hwmon_temp:
 		switch (attr) {
 		case hwmon_temp_input:
-			*val = 0;
+			err = ec_read(T_SENSOR_OFFSET, &byte_read);
+			if (err)
+				return err;
+
+			*val = byte_read * 1000;
 			return 0;
 		default:
 			break;
@@ -100,7 +110,13 @@ static struct platform_device *asus_platform_device;
 
 static int __init asus_ec_sensors_init(void)
 {
+	acpi_handle ec_handle;
+
 	if (!dmi_first_match(asus_ec_sensors_dmi_match))
+		return -ENODEV;
+
+	ec_handle = ec_get_handle();
+	if (!ec_handle)
 		return -ENODEV;
 
 	asus_platform_device = platform_create_bundle(&asus_platform_driver,
