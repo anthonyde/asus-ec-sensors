@@ -39,6 +39,7 @@ static umode_t asus_hwmon_is_visible(const void *data,
 	case hwmon_temp:
 		switch (attr) {
 		case hwmon_temp_input:
+		case hwmon_temp_label:
 			return 0444;
 		default:
 			break;
@@ -74,13 +75,28 @@ static int asus_hwmon_read(struct device *dev, enum hwmon_sensor_types type,
 	return -EOPNOTSUPP;
 }
 
+static int asus_hwmon_read_label(struct device *dev,
+				 enum hwmon_sensor_types type, u32 attr,
+				 int channel, const char **str)
+{
+	switch (type) {
+	case hwmon_temp:
+		*str = "T_Sensor";
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+	return 0;
+}
+
 static const struct hwmon_ops asus_hwmon_ops = {
 	.is_visible = asus_hwmon_is_visible,
 	.read = asus_hwmon_read,
+	.read_string = asus_hwmon_read_label,
 };
 
 static const struct hwmon_channel_info *asus_hwmon_info[] = {
-	HWMON_CHANNEL_INFO(temp, HWMON_T_INPUT),
+	HWMON_CHANNEL_INFO(temp, HWMON_T_INPUT | HWMON_T_LABEL),
 	NULL
 };
 
