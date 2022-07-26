@@ -1,5 +1,8 @@
 # Linux EC sensor driver for Asus X570 motherboards
 
+**NOTE: This driver has been superseded by the upstream `asus-ec-sensors`
+module in Linux 5.18.**
+
 This is a Linux kernel module that provides a hardware monitoring interface
 for additional sensors on Asus X570 motherboards, such as an external
 temperature probe connected to the "T_Sensor" header.
